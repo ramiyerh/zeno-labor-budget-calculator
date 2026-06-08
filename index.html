@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zeno · Labor-Budget Calculator</title>
+<style>
+  :root {
+    --blue: #1a3a5c;
+    --accent: #2563eb;
+    --green: #16a34a;
+    --amber: #d97706;
+    --light: #f8fafc;
+    --border: #e2e8f0;
+    --text: #1e293b;
+    --muted: #64748b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f1f5f9; color: var(--text); font-size: 14px; }
+
+  .header { background: var(--blue); color: white; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; }
+  .header h1 { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; }
+  .header .sub { font-size: 12px; opacity: 0.7; margin-top: 2px; }
+  .print-btn { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+  .print-btn:hover { background: rgba(255,255,255,0.25); }
+
+  .tabs { background: white; border-bottom: 2px solid var(--border); display: flex; padding: 0 24px; }
+  .tab { padding: 12px 20px; cursor: pointer; font-size: 13px; font-weight: 500; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -2px; }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  .container { max-width: 900px; margin: 24px auto; padding: 0 16px; }
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .card { background: white; border-radius: 10px; border: 1px solid var(--border); margin-bottom: 16px; overflow: hidden; }
+  .card-header { background: var(--light); border-bottom: 1px solid var(--border); padding: 12px 20px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); }
+
+  .inputs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+  .input-row { padding: 14px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .input-row:last-child { border-bottom: none; }
+  .input-row.primary { background: #eff6ff; }
+  .input-label { font-size: 13px; font-weight: 600; color: var(--text); }
+  .input-hint { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .input-wrap { display: flex; align-items: center; gap: 8px; }
+  .input-prefix { font-size: 13px; color: var(--muted); font-weight: 600; }
+  input[type=number] { width: 120px; padding: 7px 10px; border: 1.5px solid var(--border); border-radius: 6px; font-size: 14px; font-weight: 600; color: var(--text); text-align: right; outline: none; }
+  input[type=number]:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+  .input-unit { font-size: 12px; color: var(--muted); min-width: 60px; }
+
+  .outputs-grid { padding: 0; }
+  .out-section { padding: 16px 20px; border-bottom: 1px solid var(--border); }
+  .out-section:last-child { border-bottom: none; }
+  .out-section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 12px; }
+  .out-row { display: flex; justify-content: space-between; align-items: baseline; padding: 4px 0; }
+  .out-label { font-size: 13px; color: var(--muted); }
+  .out-val { font-size: 14px; font-weight: 700; color: var(--text); }
+  .out-val.big { font-size: 22px; color: var(--green); }
+  .out-val.big-amber { font-size: 22px; color: var(--amber); }
+  .out-val.blue { color: var(--accent); }
+  .tier-badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; background: #dbeafe; color: var(--accent); }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+  .highlight-box { background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 16px 20px; margin-bottom: 16px; }
+  .highlight-box .hl-label { font-size: 11px; font-weight: 700; text-transform: uppercase; color: #16a34a; letter-spacing: 0.5px; margin-bottom: 8px; }
+  .highlight-box .hl-row { display: flex; justify-content: space-between; margin-bottom: 6px; }
+  .highlight-box .hl-key { font-size: 13px; color: #166534; }
+  .highlight-box .hl-val { font-size: 15px; font-weight: 800; color: #15803d; }
+
+  .ratio-block { background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 14px 18px; }
+  .ratio-row { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+  .ratio-row:last-child { margin-bottom: 0; }
+  .ratio-label { font-size: 12px; color: var(--muted); min-width: 140px; }
+  .ratio-bar-wrap { flex: 1; height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+  .ratio-bar { height: 100%; border-radius: 4px; transition: width 0.3s; }
+  .ratio-val { font-size: 13px; font-weight: 700; min-width: 48px; text-align: right; }
+
+  .note { font-size: 11px; color: var(--muted); padding: 10px 20px; border-top: 1px solid var(--border); background: var(--light); font-style: italic; }
+
+  .worked-label { background: #fef3c7; border: 1px solid #fcd34d; border-radius: 6px; padding: 8px 14px; font-size: 12px; color: #92400e; margin-bottom: 16px; }
+
+  @media print {
+    body { background: white; }
+    .header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .tabs, .print-btn { display: none !important; }
+    .panel { display: block !important; }
+    #panel-worked { display: none !important; }
+    .container { max-width: 100%; margin: 0; padding: 0; }
+    .card { border-radius: 0; margin-bottom: 8px; page-break-inside: avoid; }
+    input[type=number] { border: none; background: transparent; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="h1">Zeno · Labor-Budget Calculator</div>
+    <div class="sub">v1.1 · Spec §7.1 · US only · Confidential</div>
+  </div>
+  <button class="print-btn" onclick="window.print()">Export PDF</button>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('calc')">Calculator</div>
+  <div class="tab" onclick="switchTab('worked')">Worked Example (§6)</div>
+</div>
+
+<div class="container">
+
+  <!-- CALCULATOR TAB -->
+  <div id="panel-calc" class="panel active">
+
+    <div class="card">
+      <div class="card-header">Inputs — ask the buyer in this order</div>
+      <div class="inputs-grid">
+
+        <div class="input-row primary" style="grid-column:1/-1">
+          <div>
+            <div class="input-label">▶ Analysts per BU <span style="color:#ef4444;font-size:11px">★ Ask first</span></div>
+            <div class="input-hint">Quoting + sales-eng headcount per business unit. SUN-57 default 7; capture buyer's actual number.</div>
+          </div>
+          <div class="input-wrap">
+            <input type="number" id="H" value="7" min="1" max="100" step="1" oninput="calc()">
+            <span class="input-unit">analysts / BU</span>
+          </div>
+        </div>
+
+        <div class="input-row">
+          <div>
+            <div class="input-label">Loaded cost per analyst</div>
+            <div class="input-hint">US median $148K (Salary.com 2024 × 1.5× BLS loaded)</div>
+          </div>
+          <div class="input-wrap">
+            <span class="input-prefix">$</span>
+            <input type="number" id="L" value="148000" min="50000" max="500000" step="1000" oninput="calc()">
+            <span class="input-unit">/ yr</span>
+          </div>
+        </div>
+
+        <div class="input-row">
+          <div>
+            <div class="input-label">RFQs per BU per month</div>
+            <div class="input-hint">Annual quoting volume per business unit ÷ 12</div>
+          </div>
+          <div class="input-wrap">
+            <input type="number" id="R" value="50" min="1" max="10000" step="10" oninput="calc()">
+            <span class="input-unit">RFQs / mo</span>
+          </div>
+        </div>
+
+        <div class="input-row">
+          <div>
+            <div class="input-label">Current software spend</div>
+            <div class="input-hint">Annual quoting/PLM/ERP software per BU</div>
+          </div>
+          <div class="input-wrap">
+            <span class="input-prefix">$</span>
+            <input type="number" id="S" value="125000" min="0" max="2000000" step="5000" oninput="calc()">
+            <span class="input-unit">/ yr / BU</span>
+          </div>
+        </div>
+
+        <div class="input-row" style="grid-column:1/-1">
+          <div>
+            <div class="input-label">Number of BUs</div>
+            <div class="input-hint">Business units in scope. Multi-Plant pricing applies at B≥2.</div>
+          </div>
+          <div class="input-wrap">
+            <input type="number" id="B" value="1" min="1" max="50" step="1" oninput="calc()">
+            <span class="input-unit">BUs</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div id="output-area"></div>
+
+  </div>
+
+  <!-- WORKED EXAMPLE TAB -->
+  <div id="panel-worked" class="panel">
+    <div class="worked-label">
+      Pre-filled: §6 worked example — 3-BU Tier 1 prospect, 600 RFQs/BU/yr, $148K loaded cost, $125K software spend. Use this tab to demo "what good looks like" before entering the prospect's numbers.
+    </div>
+    <div id="output-worked"></div>
+  </div>
+
+</div>
+
+<script>
+function fmt$(n){ return '$'+Math.round(n).toLocaleString('en-US'); }
+function fmtPct(n){ return (n*100).toFixed(1)+'%'; }
+function fmtMo(n){ return n.toFixed(1)+' mo'; }
+
+function pickTier(B, R_annual){
+  if(B===1 && R_annual<=200) return 'Pilot';
+  if(B===1 && R_annual<=1500) return 'Plant';
+  if(B===1 && R_annual>1500) return 'Plant + overage';
+  if(B>=2 && B<=5) return 'Multi-Plant';
+  return 'Enterprise';
+}
+function annualPerBU(tier, B, R_annual){
+  if(tier==='Pilot') return 50000;
+  if(tier==='Plant') return 180000;
+  if(tier==='Plant + overage') return 180000 + Math.ceil((R_annual-1500)/500)*40000;
+  if(tier==='Multi-Plant') return Math.max(145000, 435000/B);
+  return 700000/B;
+}
+function implFee(tier){
+  return {Pilot:0,Plant:75000,'Plant + overage':75000,'Multi-Plant':120000,Enterprise:200000}[tier];
+}
+
+function evaluate(H,L,R_mo,S,B){
+  const R = R_mo*12;
+  const tier = pickTier(B,R);
+  const perBU = annualPerBU(tier,B,R);
+  const impl = implFee(tier);
+  const laborPerBU = H*L;
+  const totalLabor = laborPerBU*B;
+  const consUnlock = laborPerBU*0.5*B;
+  const tgtUnlock  = laborPerBU*0.7*B;
+  const consNet = consUnlock - perBU*B - impl;
+  const tgtNet  = tgtUnlock  - perBU*B - impl;
+  const consPayback = (perBU + impl/B)/(laborPerBU*0.5/12);
+  const tgtPayback  = (perBU + impl/B)/(laborPerBU*0.7/12);
+  const todayPct = S/laborPerBU;
+  const y1pct = (S+perBU)/laborPerBU;
+  const y3pct = (S+perBU)/(laborPerBU*0.8);
+  return {tier,perBU,impl,laborPerBU,totalLabor,consUnlock,tgtUnlock,consNet,tgtNet,consPayback,tgtPayback,todayPct,y1pct,y3pct};
+}
+
+function renderOutput(v, container){
+  const zeno_y1 = v.perBU*parseInt(document.getElementById('B')?.value||3) + v.impl;
+  const B_val = parseInt(document.getElementById('B')?.value||3);
+  const ratioBar = (pct) => {
+    const w = Math.min(pct*100*2, 100);
+    const color = pct < 0.20 ? '#16a34a' : pct < 0.40 ? '#2563eb' : '#d97706';
+    return `<div class="ratio-bar-wrap"><div class="ratio-bar" style="width:${w}%;background:${color}"></div></div>`;
+  };
+
+  container.innerHTML = `
+    <div class="highlight-box">
+      <div class="hl-label">Year-1 Net Value (Conservative → Target)</div>
+      <div class="hl-row">
+        <span class="hl-key">Conservative (50% deflection)</span>
+        <span class="hl-val">${fmt$(v.consNet)}</span>
+      </div>
+      <div class="hl-row">
+        <span class="hl-key">Target (70% deflection)</span>
+        <span class="hl-val">${fmt$(v.tgtNet)}</span>
+      </div>
+      <div class="hl-row" style="margin-top:8px;padding-top:8px;border-top:1px solid #86efac">
+        <span class="hl-key">Payback period</span>
+        <span class="hl-val">${fmtMo(v.consPayback)} – ${fmtMo(v.tgtPayback)}</span>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div class="card">
+        <div class="card-header">Tier &amp; Spend</div>
+        <div class="out-section">
+          <div class="out-row"><span class="out-label">Recommended tier</span><span class="tier-badge">${v.tier}</span></div>
+          <div class="out-row"><span class="out-label">Platform fee / BU / yr</span><span class="out-val blue">${fmt$(v.perBU)}</span></div>
+          <div class="out-row"><span class="out-label">Implementation (Year 1)</span><span class="out-val">${fmt$(v.impl)}</span></div>
+          <div class="out-row" style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px">
+            <span class="out-label" style="font-weight:700">Total Year-1 Zeno spend</span>
+            <span class="out-val blue" style="font-size:16px">${fmt$(v.perBU*B_val+v.impl)}</span>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">Labor Envelope</div>
+        <div class="out-section">
+          <div class="out-row"><span class="out-label">Labor budget / BU</span><span class="out-val">${fmt$(v.laborPerBU)}</span></div>
+          <div class="out-row"><span class="out-label">Total labor budget</span><span class="out-val">${fmt$(v.totalLabor)}</span></div>
+          <div class="out-row" style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px">
+            <span class="out-label">Capacity unlocked (cons.)</span><span class="out-val">${fmt$(v.consUnlock)}</span>
+          </div>
+          <div class="out-row"><span class="out-label">Capacity unlocked (target)</span><span class="out-val">${fmt$(v.tgtUnlock)}</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">Strategic Ratio Shift — Software : Labor</div>
+      <div class="out-section">
+        <div class="ratio-block">
+          <div class="ratio-row">
+            <span class="ratio-label">Today (no Zeno)</span>
+            ${ratioBar(v.todayPct)}
+            <span class="ratio-val" style="color:var(--muted)">${fmtPct(v.todayPct)}</span>
+          </div>
+          <div class="ratio-row">
+            <span class="ratio-label">Year 1 with Zeno</span>
+            ${ratioBar(v.y1pct)}
+            <span class="ratio-val" style="color:var(--accent)">${fmtPct(v.y1pct)}</span>
+          </div>
+          <div class="ratio-row">
+            <span class="ratio-label">Year 3 (post-redeployment)</span>
+            ${ratioBar(v.y3pct)}
+            <span class="ratio-val" style="color:var(--green)">${fmtPct(v.y3pct)}</span>
+          </div>
+        </div>
+        <div class="note" style="padding:10px 0 0 0;border:none;background:none;font-style:normal">
+          Year-1 capacity unlocked is redeployed (more RFQs, complex deals), not terminated — labor envelope holds flat.
+          Year-3 reflects 20% net headcount reduction (post-redeployment industry average).
+          Say <em>"capacity unlocked"</em> and <em>"labor envelope shifts"</em> — not "headcount eliminated."
+        </div>
+      </div>
+    </div>
+    <div class="note" style="border-radius:8px;border:1px solid var(--border)">
+      Deflection band 50–70%: vendor-deployed range (SUN-57 §5). Floor 30% = SLA-floor answer (framework §7.2) — not an editable input.
+      Tier rule: Pilot (B=1, ≤200 RFQ/yr) · Plant (B=1, ≤1500) · Multi-Plant (B 2–5) · Enterprise (B≥6).
+      US-only scope; EU toggle deferred pending SUN-57 EU interviews.
+    </div>
+  `;
+}
+
+function calc(){
+  const H = parseFloat(document.getElementById('H').value)||7;
+  const L = parseFloat(document.getElementById('L').value)||148000;
+  const R = parseFloat(document.getElementById('R').value)||50;
+  const S = parseFloat(document.getElementById('S').value)||125000;
+  const B = parseInt(document.getElementById('B').value)||1;
+  const v = evaluate(H,L,R,S,B);
+  renderOutput(v, document.getElementById('output-area'));
+}
+
+function renderWorked(){
+  // §6 worked example: H=7, L=148000, R=600/yr=50/mo, S=125000, B=3
+  const v = evaluate(7,148000,50,125000,3);
+  // Override B for display
+  const container = document.getElementById('output-worked');
+  // Temporarily set B for renderOutput
+  const origB = document.getElementById('B');
+  const fakeB = {value:'3'};
+  // manual render for worked example
+  const B_val = 3;
+  const zeno_y1 = v.perBU*B_val + v.impl;
+  const ratioBar = (pct) => {
+    const w = Math.min(pct*100*2, 100);
+    const color = pct < 0.20 ? '#16a34a' : pct < 0.40 ? '#2563eb' : '#d97706';
+    return `<div class="ratio-bar-wrap"><div class="ratio-bar" style="width:${w}%;background:${color}"></div></div>`;
+  };
+  container.innerHTML = `
+    <div class="highlight-box">
+      <div class="hl-label">Year-1 Net Value — §6 Target Numbers (Multi-Plant, B=3)</div>
+      <div class="hl-row"><span class="hl-key">Conservative (50% deflection)</span><span class="hl-val">${fmt$(v.consNet)}</span></div>
+      <div class="hl-row"><span class="hl-key">Target (70% deflection)</span><span class="hl-val">${fmt$(v.tgtNet)}</span></div>
+      <div class="hl-row" style="margin-top:8px;padding-top:8px;border-top:1px solid #86efac">
+        <span class="hl-key">Payback period</span>
+        <span class="hl-val">${fmtMo(v.consPayback)} – ${fmtMo(v.tgtPayback)}</span>
+      </div>
+    </div>
+    <div class="two-col">
+      <div class="card">
+        <div class="card-header">Tier &amp; Spend (§6 locked)</div>
+        <div class="out-section">
+          <div class="out-row"><span class="out-label">Tier</span><span class="tier-badge">${v.tier}</span></div>
+          <div class="out-row"><span class="out-label">Platform fee / BU</span><span class="out-val blue">${fmt$(v.perBU)} ($145K)</span></div>
+          <div class="out-row"><span class="out-label">Implementation</span><span class="out-val">${fmt$(v.impl)}</span></div>
+          <div class="out-row" style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px">
+            <span class="out-label" style="font-weight:700">Total Zeno Y1</span>
+            <span class="out-val blue" style="font-size:16px">${fmt$(zeno_y1)}</span>
+          </div>
+          <div class="out-row"><span class="out-label">Zeno / Total Labor</span><span class="out-val">${fmtPct(zeno_y1/(v.totalLabor))}</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">Labor Envelope (§6 locked)</div>
+        <div class="out-section">
+          <div class="out-row"><span class="out-label">Analysts/BU</span><span class="out-val">7</span></div>
+          <div class="out-row"><span class="out-label">Loaded cost/analyst</span><span class="out-val">$148K</span></div>
+          <div class="out-row"><span class="out-label">Labor/BU</span><span class="out-val">$1,036,000</span></div>
+          <div class="out-row"><span class="out-label">Total (3 BU)</span><span class="out-val">$3,108,000</span></div>
+          <div class="out-row"><span class="out-label">Capacity unlocked (50%)</span><span class="out-val">${fmt$(v.consUnlock)}</span></div>
+          <div class="out-row"><span class="out-label">Capacity unlocked (70%)</span><span class="out-val">${fmt$(v.tgtUnlock)}</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">Strategic Ratio Shift</div>
+      <div class="out-section">
+        <div class="ratio-block">
+          <div class="ratio-row">
+            <span class="ratio-label">Today</span>${ratioBar(v.todayPct)}<span class="ratio-val" style="color:var(--muted)">${fmtPct(v.todayPct)}</span>
+          </div>
+          <div class="ratio-row">
+            <span class="ratio-label">Year 1 with Zeno</span>${ratioBar(v.y1pct)}<span class="ratio-val" style="color:var(--accent)">${fmtPct(v.y1pct)}</span>
+          </div>
+          <div class="ratio-row">
+            <span class="ratio-label">Year 3 (post-redeployment)</span>${ratioBar(v.y3pct)}<span class="ratio-val" style="color:var(--green)">${fmtPct(v.y3pct)}</span>
+          </div>
+        </div>
+        <div style="margin-top:12px;font-size:12px;color:var(--muted)">
+          §6 expects: Conservative ~$999K / Target ~$1.62M / Payback 4.3–3.1 mo / Y3 ratio ~32.6% — all verified by verify_outputs.py.
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function switchTab(t){
+  document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('active',['calc','worked'][i]===t));
+  document.querySelectorAll('.panel').forEach(el=>el.classList.remove('active'));
+  document.getElementById('panel-'+t).classList.add('active');
+  if(t==='worked') renderWorked();
+}
+
+// Init
+calc();
+</script>
+</body>
+</html>
